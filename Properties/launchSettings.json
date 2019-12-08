@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "TestPO": {
+      "commandName": "Project",
+      "commandLineArgs": "open"
+    }
+  }
+}
