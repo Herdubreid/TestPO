@@ -1,13 +1,13 @@
-﻿using BlazorState;
+﻿using Blazor.Extensions.Storage.Interfaces;
+using BlazorState;
 using Celin.PO;
 using McMaster.Extensions.CommandLineUtils;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Reflection;
-using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace TestPO
 {
@@ -21,18 +21,33 @@ namespace TestPO
                     .AddJsonFile("appsettings.json", false, true)
                     .Build();
 
-                var server = new Celin.AIS.Server(config["baseUrl"]);
+                // Initialise the Logger
+                var loggerFactory = LoggerFactory.Create(builder =>
+                {
+                    builder
+                        .SetMinimumLevel(LogLevel.Critical)
+                        .AddConsole();
+                });
+                ILogger logger = loggerFactory.CreateLogger<Program>();
+
+                var server = new Celin.AIS.Server(config["baseUrl"], logger);
                 server.AuthRequest.username = "DEMO";
                 server.AuthRequest.password = "DEMO";
 
                 var services = new ServiceCollection()
-                    .AddSingleton(server)
+                    .AddLogging(config => {
+                        config
+                        .SetMinimumLevel(LogLevel.None)
+                        .AddConsole();
+                    })
+                    .AddScoped<Mediator>()
+                    .AddScoped<ILocalStorage, FileStorage>()
                     .AddBlazorState
                         ((options) => options.Assemblies = new Assembly[]
                         { typeof(Program).GetTypeInfo().Assembly })
                     .AddScoped<POState>()
-                    .AddScoped<Mediator>()
                     .AddMediatR(typeof(POState))
+                    .AddSingleton(server)
                     .BuildServiceProvider();
 
                 var app = new CommandLineApplication<Cmd>();
